@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +8,11 @@ import { Separator } from "@/components/ui/separator";
 import { 
   TreePine, 
   Mail, 
-  Lock, 
   Eye, 
   EyeOff,
   Github
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,11 +20,27 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp, signInWithGoogle, signInWithGithub, user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Auth logic will be implemented with Supabase
-    console.log("Auth form submitted");
+    setLoading(true);
+    
+    if (isLogin) {
+      await signIn(email, password);
+    } else {
+      await signUp(email, password);
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -53,6 +70,8 @@ export default function Auth() {
               <Button 
                 className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white hover:opacity-90"
                 size="lg"
+                onClick={signInWithGoogle}
+                disabled={loading}
               >
                 <Mail className="w-5 h-5 mr-2" />
                 Continue with Google
@@ -62,6 +81,8 @@ export default function Auth() {
                 variant="outline" 
                 className="w-full border-border hover:bg-muted"
                 size="lg"
+                onClick={signInWithGithub}
+                disabled={loading}
               >
                 <Github className="w-5 h-5 mr-2" />
                 Continue with GitHub
@@ -136,8 +157,9 @@ export default function Auth() {
                 type="submit"
                 className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white"
                 size="lg"
+                disabled={loading}
               >
-                {isLogin ? "Sign In" : "Create Account"}
+                {loading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
               </Button>
             </form>
 

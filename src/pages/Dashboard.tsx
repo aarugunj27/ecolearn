@@ -1,130 +1,175 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { 
+  Trophy, 
   Flame, 
-  Zap, 
-  TreePine, 
-  Droplets,
-  Calendar,
-  Star,
-  ChevronRight,
-  BookOpen
+  Star, 
+  Target,
+  LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProgress } from "@/hooks/useProgress";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
-  const streakDays = 7;
-  const totalXP = 1250;
-  const levelXP = 950;
-  const nextLevelXP = 1000;
+  const { user, signOut } = useAuth();
+  const { progress, loading } = useProgress();
+  const [dailyQuests, setDailyQuests] = useState<any[]>([]);
 
-  const dailyQuests = [
-    { title: "Complete 3 lessons", progress: 2, total: 3, xp: 50 },
-    { title: "Use scanner feature", progress: 0, total: 1, xp: 30 },
-    { title: "Learn about renewable energy", progress: 1, total: 1, xp: 40 },
-  ];
+  useEffect(() => {
+    if (user) {
+      fetchDailyQuests();
+    }
+  }, [user]);
 
-  const categories = [
-    { name: "Energy Saving", icon: Zap, color: "text-yellow-600", progress: 65 },
-    { name: "Waste Reduction", icon: TreePine, color: "text-green-600", progress: 45 },
-    { name: "Sustainable Food", icon: Droplets, color: "text-blue-600", progress: 30 },
-    { name: "Eco Travel", icon: Calendar, color: "text-purple-600", progress: 20 },
-  ];
+  const fetchDailyQuests = async () => {
+    if (!user) return;
+    
+    const { data: quests } = await supabase
+      .from('daily_quests')
+      .select('*')
+      .limit(3);
+
+    const { data: userQuests } = await supabase
+      .from('user_daily_quests')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('quest_date', new Date().toISOString().split('T')[0]);
+
+    const questsWithProgress = (quests || []).map(quest => {
+      const userQuest = userQuests?.find(uq => uq.quest_id === quest.id);
+      return {
+        ...quest,
+        current_progress: userQuest?.current_progress || 0,
+        completed: userQuest?.completed || false
+      };
+    });
+
+    setDailyQuests(questsWithProgress);
+  };
+
+  const xpToNextLevel = progress ? ((progress.level) * 100) - progress.xp : 100;
+  const xpProgress = progress ? (progress.xp % 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20 p-4 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-eco-primary to-eco-secondary rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Welcome back!</h1>
-            <p className="text-white/80">Ready to save the planet?</p>
-          </div>
-          <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
-            <Flame className="w-5 h-5" />
-            <span className="font-bold">{streakDays}</span>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Welcome Back!</h1>
+          <p className="text-muted-foreground">{user?.email}</p>
         </div>
-        
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm">Level 5</span>
-            <span className="text-sm">{levelXP}/{nextLevelXP} XP</span>
-          </div>
-          <Progress value={(levelXP / nextLevelXP) * 100} className="h-2" />
-        </div>
+        <Button variant="ghost" size="icon" onClick={signOut}>
+          <LogOut className="h-5 h-5" />
+        </Button>
       </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Level</span>
+            </div>
+            <div className="text-3xl font-bold text-primary">{progress?.level || 1}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Flame className="w-5 h-5 text-destructive" />
+              <span className="text-sm text-muted-foreground">Streak</span>
+            </div>
+            <div className="text-3xl font-bold text-destructive">{progress?.streak_days || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* XP Progress */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>XP Progress</CardTitle>
+              <CardDescription>{progress?.xp || 0} XP • {xpToNextLevel} XP to next level</CardDescription>
+            </div>
+            <Trophy className="w-6 h-6 text-primary" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Progress value={xpProgress} className="h-3" />
+        </CardContent>
+      </Card>
 
       {/* Daily Quests */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-primary" />
+            <Target className="w-5 h-5" />
             Daily Quests
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {dailyQuests.map((quest, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div className="space-y-1">
-                <p className="font-medium">{quest.title}</p>
-                <div className="flex items-center gap-2">
-                  <Progress 
-                    value={(quest.progress / quest.total) * 100} 
-                    className="h-2 w-24"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {quest.progress}/{quest.total}
-                  </span>
-                </div>
+          {dailyQuests.map((quest) => (
+            <div 
+              key={quest.id}
+              className={`p-4 rounded-lg border ${
+                quest.completed ? 'bg-success/10 border-success/20' : 'bg-muted/50'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">{quest.title}</h3>
+                <Badge variant={quest.completed ? "default" : "outline"}>
+                  +{quest.xp_reward} XP
+                </Badge>
               </div>
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                +{quest.xp} XP
-              </Badge>
+              <p className="text-sm text-muted-foreground mb-2">{quest.description}</p>
+              <div className="flex items-center gap-2">
+                <Progress 
+                  value={(quest.current_progress / quest.target_value) * 100} 
+                  className="flex-1 h-2" 
+                />
+                <span className="text-sm font-medium">
+                  {quest.current_progress}/{quest.target_value}
+                </span>
+              </div>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      {/* Progress Overview */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Your Progress</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {categories.map((category, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <category.icon className={`w-5 h-5 ${category.color}`} />
-                  <span className="font-medium">{category.name}</span>
-                </div>
-                <span className="text-sm text-muted-foreground">{category.progress}%</span>
-              </div>
-              <Progress value={category.progress} className="h-2" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <Button 
-          className="h-16 bg-gradient-to-r from-eco-primary to-eco-secondary text-white border-0 shadow-eco"
-          size="lg"
-        >
-          <BookOpen className="w-5 h-5 mr-2" />
-          Start Lesson
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-16 border-primary/30 hover:bg-primary/5"
-          size="lg"
-        >
-          <Zap className="w-5 h-5 mr-2" />
-          View Skills
-        </Button>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-foreground mb-1">
+              {progress?.total_lessons_completed || 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Lessons Completed</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-foreground mb-1">
+              {progress?.total_scans || 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Items Scanned</div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
