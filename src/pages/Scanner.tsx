@@ -74,6 +74,36 @@ export default function Scanner() {
   const [result, setResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [nearbyCenter, setNearbyCenter] = useState<any>(null);
+  type RecentScan = {
+    item: string;
+    category: string;
+    date: string;
+    confidence: number;
+    correct: boolean;
+  };
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([
+    {
+      item: "Aluminum Can",
+      category: "Recyclable",
+      date: "Today",
+      confidence: 98,
+      correct: true,
+    },
+    {
+      item: "Pizza Box",
+      category: "Compostable",
+      date: "Yesterday",
+      confidence: 85,
+      correct: true,
+    },
+    {
+      item: "Styrofoam Container",
+      category: "Trash",
+      date: "2 days ago",
+      confidence: 94,
+      correct: false,
+    },
+  ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -101,9 +131,50 @@ export default function Scanner() {
       if (progress) {
         await checkAndAwardAchievements(progress);
       }
+
+      // Update in-memory recent list for immediate UI feedback
+      setRecentScans((prev) =>
+        [
+          {
+            item: result.item,
+            category: result.category,
+            date: "Just now",
+            confidence:
+              typeof result.confidence === "number" ? result.confidence : 0,
+            correct: true,
+          },
+          ...prev,
+        ].slice(0, 10)
+      );
     } catch (error) {
       console.error("Error saving scan:", error);
     }
+  };
+
+  // Heuristic to extract a material keyword from item/category
+  const extractMaterial = (item: string, category: string) => {
+    const s = `${item || ""} ${category || ""}`.toLowerCase();
+    const materials = [
+      "aluminum",
+      "metal",
+      "plastic",
+      "paper",
+      "cardboard",
+      "glass",
+      "steel",
+      "electronics",
+      "battery",
+      "organic",
+      "compost",
+      "textile",
+    ];
+    for (const m of materials) {
+      if (s.includes(m)) return m;
+    }
+    if (s.includes("can")) return "aluminum";
+    if (s.includes("bottle")) return "plastic";
+    if (s.includes("box")) return "cardboard";
+    return category?.toLowerCase() || "recyclable";
   };
 
   const findNearbyCenter = async (material: string) => {
@@ -177,7 +248,9 @@ export default function Scanner() {
 
       setResult(scanResult);
       await saveScanToHistory(scanResult);
-      await findNearbyCenter(scanResult.category);
+      await findNearbyCenter(
+        extractMaterial(scanResult.item, scanResult.category)
+      );
 
       toast({
         title: "Analysis complete!",
@@ -210,7 +283,10 @@ export default function Scanner() {
         item: searchQuery,
         recyclable: isRecyclable,
         confidence: Math.floor(Math.random() * 20) + 80,
-        category: isRecyclable ? "Recyclable" : "Trash",
+        // Try to infer a material from the query
+        category: isRecyclable
+          ? extractMaterial(searchQuery, "Recyclable") || "Recyclable"
+          : extractMaterial(searchQuery, "Trash") || "Trash",
         instructions: isRecyclable
           ? "This item can be recycled at most facilities"
           : "This item should be disposed of in regular trash",
@@ -227,7 +303,9 @@ export default function Scanner() {
 
       setResult(searchResult);
       await saveScanToHistory(searchResult);
-      await findNearbyCenter(searchResult.category);
+      await findNearbyCenter(
+        extractMaterial(searchResult.item, searchResult.category)
+      );
       setIsScanning(false);
     }, 1000);
   };
@@ -259,14 +337,7 @@ export default function Scanner() {
   return (
     <div className="min-h-screen bg-background pb-20 p-4 space-y-6">
       {/* Hidden file input used by the Take Photo / Upload buttons */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
+      {/* (Consolidated to a single input below in the Scanner Card) */}
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Eco Scanner</h1>
@@ -317,6 +388,7 @@ export default function Scanner() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    capture="environment"
                     onChange={handleImageUpload}
                     className="hidden"
                   />
@@ -477,7 +549,7 @@ export default function Scanner() {
           <CardTitle>Recent Scans</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {scanHistory.map((scan, index) => (
+          {recentScans.map((scan, index) => (
             <div
               key={index}
               className="flex items-center justify-between p-3 bg-muted rounded-lg"
