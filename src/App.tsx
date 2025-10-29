@@ -10,7 +10,6 @@ import Lessons from "./pages/Lessons";
 import SkillTree from "./pages/SkillTree";
 import Achievements from "./pages/Achievements";
 import Scanner from "./pages/Scanner";
-import Map from "./pages/Map";
 import Auth from "./pages/Auth";
 import MobileNavigation from "./components/MobileNavigation";
 import NotFound from "./pages/NotFound";
@@ -60,22 +59,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/scanner"
-                element={
-                  <ProtectedRoute>
-                    <Scanner />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/map"
-                element={
-                  <ProtectedRoute>
-                    <Map />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/scanner" element={<Scanner />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MobileNavigation />

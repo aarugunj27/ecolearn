@@ -73,37 +73,6 @@ export default function Scanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [nearbyCenter, setNearbyCenter] = useState<any>(null);
-  type RecentScan = {
-    item: string;
-    category: string;
-    date: string;
-    confidence: number;
-    correct: boolean;
-  };
-  const [recentScans, setRecentScans] = useState<RecentScan[]>([
-    {
-      item: "Aluminum Can",
-      category: "Recyclable",
-      date: "Today",
-      confidence: 98,
-      correct: true,
-    },
-    {
-      item: "Pizza Box",
-      category: "Compostable",
-      date: "Yesterday",
-      confidence: 85,
-      correct: true,
-    },
-    {
-      item: "Styrofoam Container",
-      category: "Trash",
-      date: "2 days ago",
-      confidence: 94,
-      correct: false,
-    },
-  ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -112,6 +81,7 @@ export default function Scanner() {
   const { toast } = useToast();
 
   const saveScanToHistory = async (result: any) => {
+    // Only save if user is logged in
     if (!user) return;
 
     try {
@@ -131,62 +101,8 @@ export default function Scanner() {
       if (progress) {
         await checkAndAwardAchievements(progress);
       }
-
-      // Update in-memory recent list for immediate UI feedback
-      setRecentScans((prev) =>
-        [
-          {
-            item: result.item,
-            category: result.category,
-            date: "Just now",
-            confidence:
-              typeof result.confidence === "number" ? result.confidence : 0,
-            correct: true,
-          },
-          ...prev,
-        ].slice(0, 10)
-      );
     } catch (error) {
       console.error("Error saving scan:", error);
-    }
-  };
-
-  // Heuristic to extract a material keyword from item/category
-  const extractMaterial = (item: string, category: string) => {
-    const s = `${item || ""} ${category || ""}`.toLowerCase();
-    const materials = [
-      "aluminum",
-      "metal",
-      "plastic",
-      "paper",
-      "cardboard",
-      "glass",
-      "steel",
-      "electronics",
-      "battery",
-      "organic",
-      "compost",
-      "textile",
-    ];
-    for (const m of materials) {
-      if (s.includes(m)) return m;
-    }
-    if (s.includes("can")) return "aluminum";
-    if (s.includes("bottle")) return "plastic";
-    if (s.includes("box")) return "cardboard";
-    return category?.toLowerCase() || "recyclable";
-  };
-
-  const findNearbyCenter = async (material: string) => {
-    const { data } = await supabase
-      .from("recycling_centers")
-      .select("*")
-      .contains("accepted_materials", [material.toLowerCase()])
-      .limit(1)
-      .single();
-
-    if (data) {
-      setNearbyCenter(data);
     }
   };
 
@@ -248,9 +164,6 @@ export default function Scanner() {
 
       setResult(scanResult);
       await saveScanToHistory(scanResult);
-      await findNearbyCenter(
-        extractMaterial(scanResult.item, scanResult.category)
-      );
 
       toast({
         title: "Analysis complete!",
@@ -283,10 +196,7 @@ export default function Scanner() {
         item: searchQuery,
         recyclable: isRecyclable,
         confidence: Math.floor(Math.random() * 20) + 80,
-        // Try to infer a material from the query
-        category: isRecyclable
-          ? extractMaterial(searchQuery, "Recyclable") || "Recyclable"
-          : extractMaterial(searchQuery, "Trash") || "Trash",
+        category: isRecyclable ? "Recyclable" : "Trash",
         instructions: isRecyclable
           ? "This item can be recycled at most facilities"
           : "This item should be disposed of in regular trash",
@@ -303,36 +213,9 @@ export default function Scanner() {
 
       setResult(searchResult);
       await saveScanToHistory(searchResult);
-      await findNearbyCenter(
-        extractMaterial(searchResult.item, searchResult.category)
-      );
       setIsScanning(false);
     }, 1000);
   };
-
-  const scanHistory = [
-    {
-      item: "Aluminum Can",
-      category: "Recyclable",
-      date: "Today",
-      confidence: 98,
-      correct: true,
-    },
-    {
-      item: "Pizza Box",
-      category: "Compostable",
-      date: "Yesterday",
-      confidence: 85,
-      correct: true,
-    },
-    {
-      item: "Styrofoam Container",
-      category: "Trash",
-      date: "2 days ago",
-      confidence: 94,
-      correct: false,
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background pb-20 p-4 space-y-6">
@@ -429,8 +312,14 @@ export default function Scanner() {
 
             {result && (
               <div className="space-y-6 animate-slide-up">
-                <div className="w-32 h-32 mx-auto bg-gradient-to-r from-success to-eco-primary rounded-full flex items-center justify-center">
-                  {result.category === "Recyclable" ? (
+                <div
+                  className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center ${
+                    result.recyclable
+                      ? "bg-gradient-to-r from-green-500 to-green-600"
+                      : "bg-gradient-to-r from-red-500 to-red-600"
+                  }`}
+                >
+                  {result.recyclable ? (
                     <Recycle className="w-16 h-16 text-white" />
                   ) : (
                     <Trash2 className="w-16 h-16 text-white" />
@@ -443,17 +332,10 @@ export default function Scanner() {
                   </h3>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <Badge
-                      variant={
-                        result.category === "Recyclable"
-                          ? "default"
-                          : "destructive"
-                      }
+                      variant={result.recyclable ? "default" : "destructive"}
                       className="text-lg px-4 py-1"
                     >
-                      {result.category}
-                    </Badge>
-                    <Badge variant="outline">
-                      {result.confidence}% confident
+                      {result.recyclable ? "Recyclable" : "Not Recyclable"}
                     </Badge>
                   </div>
                 </div>
@@ -463,7 +345,7 @@ export default function Scanner() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Lightbulb className="w-5 h-5 text-primary" />
-                      Recycling Tips
+                      {result.recyclable ? "Recycling Tips" : "Disposal Tips"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -476,62 +358,9 @@ export default function Scanner() {
                   </CardContent>
                 </Card>
 
-                {/* Environmental Impact */}
-                <Card className="bg-success/10 border-success/20">
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold text-success mb-2">
-                      Environmental Impact
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="font-medium">CO₂ Saved</div>
-                        <div className="text-success">
-                          {result.impact.co2Saved}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-medium">Energy Saved</div>
-                        <div className="text-success">
-                          {result.impact.energySaved}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {nearbyCenter && (
-                  <Card className="bg-primary/10 border-primary/20">
-                    <CardContent className="p-4">
-                      <h4 className="font-semibold mb-2">
-                        Nearest Recycling Center
-                      </h4>
-                      <p className="text-sm font-medium">{nearbyCenter.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {nearbyCenter.address}
-                      </p>
-                      {nearbyCenter.phone && (
-                        <p className="text-sm mt-1">📞 {nearbyCenter.phone}</p>
-                      )}
-                      {nearbyCenter.hours && (
-                        <p className="text-sm">🕐 {nearbyCenter.hours}</p>
-                      )}
-                      <Button
-                        className="w-full mt-3"
-                        variant="outline"
-                        onClick={() =>
-                          navigate(`/map?center=${nearbyCenter.id}`)
-                        }
-                      >
-                        Get Directions
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
                 <Button
                   onClick={() => {
                     setResult(null);
-                    setNearbyCenter(null);
                   }}
                   className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white"
                 >
@@ -540,47 +369,6 @@ export default function Scanner() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Scan History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Scans</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {recentScans.map((scan, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 bg-muted rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                {scan.category === "Recyclable" ? (
-                  <Recycle className="w-5 h-5 text-success" />
-                ) : scan.category === "Compostable" ? (
-                  <CheckCircle className="w-5 h-5 text-eco-primary" />
-                ) : (
-                  <Trash2 className="w-5 h-5 text-destructive" />
-                )}
-                <div>
-                  <div className="font-medium">{scan.item}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {scan.category} • {scan.date}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {scan.confidence}%
-                </Badge>
-                {scan.correct ? (
-                  <CheckCircle className="w-4 h-4 text-success" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-destructive" />
-                )}
-              </div>
-            </div>
-          ))}
         </CardContent>
       </Card>
     </div>

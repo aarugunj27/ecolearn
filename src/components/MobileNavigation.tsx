@@ -1,12 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { 
-  Home, 
-  BookOpen, 
-  Target, 
-  Trophy, 
-  Scan,
-  MapPin 
-} from "lucide-react";
+import { Home, BookOpen, Target, Trophy, Scan } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
@@ -14,7 +7,6 @@ const navItems = [
   { to: "/skill-tree", icon: Target, label: "Skills" },
   { to: "/achievements", icon: Trophy, label: "Badges" },
   { to: "/scanner", icon: Scan, label: "Scan" },
-  { to: "/map", icon: MapPin, label: "Map" },
 ];
 
 export default function MobileNavigation() {
