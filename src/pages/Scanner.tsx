@@ -151,11 +151,16 @@ export default function Scanner() {
         confidence: data.confidence || 0,
         category: data.category || "Unknown",
         instructions: data.instructions || "No instructions available",
-        tips: [
-          "Check your local recycling guidelines",
-          "Clean the item before recycling",
-          "Remove any non-recyclable parts",
-        ],
+        tips: data.recyclable
+          ? [
+              "Check your local recycling guidelines",
+              "Clean the item before recycling",
+              "Remove any non-recyclable parts",
+            ]
+          : [
+              "Place in regular trash bin",
+              "Do not attempt to recycle this item",
+            ],
         impact: {
           co2Saved: "0.2 kg",
           energySaved: "1.2 kWh",
@@ -200,11 +205,16 @@ export default function Scanner() {
         instructions: isRecyclable
           ? "This item can be recycled at most facilities"
           : "This item should be disposed of in regular trash",
-        tips: [
-          "Check your local recycling guidelines",
-          "Clean the item before recycling",
-          "Remove any non-recyclable parts",
-        ],
+        tips: isRecyclable
+          ? [
+              "Check your local recycling guidelines",
+              "Clean the item before recycling",
+              "Remove any non-recyclable parts",
+            ]
+          : [
+              "Place in regular trash bin",
+              "Do not attempt to recycle this item",
+            ],
         impact: {
           co2Saved: "0.2 kg",
           energySaved: "1.2 kWh",
@@ -352,7 +362,7 @@ export default function Scanner() {
                     {result.tips.map((tip: string, index: number) => (
                       <div key={index} className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{tip}</span>
+                        <span className="text-sm leading-relaxed">{tip}</span>
                       </div>
                     ))}
                   </CardContent>
