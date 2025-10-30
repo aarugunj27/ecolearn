@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { 
-  TreePine, 
-  Mail, 
-  Eye, 
-  EyeOff,
-  Github
-} from "lucide-react";
+import { TreePine, Mail, Eye, EyeOff, Github } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Auth() {
@@ -21,7 +15,8 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, signInWithGoogle, signInWithGithub, user } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithGithub, user } =
+    useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,13 +28,13 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     if (isLogin) {
       await signIn(email, password);
     } else {
       await signUp(email, password);
     }
-    
+
     setLoading(false);
   };
 
@@ -67,7 +62,7 @@ export default function Auth() {
           <CardContent className="space-y-6">
             {/* Social Login Buttons */}
             <div className="space-y-3">
-              <Button 
+              <Button
                 className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white hover:opacity-90"
                 size="lg"
                 onClick={signInWithGoogle}
@@ -76,9 +71,9 @@ export default function Auth() {
                 <Mail className="w-5 h-5 mr-2" />
                 Continue with Google
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full border-border hover:bg-muted"
                 size="lg"
                 onClick={signInWithGithub}
@@ -113,7 +108,7 @@ export default function Auth() {
                   />
                 </div>
               )}
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -125,7 +120,7 @@ export default function Auth() {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -152,14 +147,18 @@ export default function Auth() {
                   </Button>
                 </div>
               </div>
-              
-              <Button 
+
+              <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-eco-primary to-eco-secondary text-white"
                 size="lg"
                 disabled={loading}
               >
-                {loading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
+                {loading
+                  ? "Please wait..."
+                  : isLogin
+                  ? "Sign In"
+                  : "Create Account"}
               </Button>
             </form>
 
@@ -170,10 +169,9 @@ export default function Auth() {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-muted-foreground hover:text-foreground"
               >
-                {isLogin 
-                  ? "Don't have an account? Sign up" 
-                  : "Already have an account? Sign in"
-                }
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
               </Button>
             </div>
 
@@ -188,21 +186,6 @@ export default function Auth() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Features Preview */}
-        <Card className="bg-muted/50">
-          <CardContent className="p-4">
-            <div className="text-center space-y-2">
-              <h3 className="font-semibold">What you'll get:</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>🌱 Daily eco challenges</div>
-                <div>🏆 Achievement badges</div>
-                <div>📊 Progress tracking</div>
-                <div>🔍 AI-powered scanner</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
